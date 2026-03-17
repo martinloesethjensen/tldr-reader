@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import './App.css';
-import { useFeed } from './hooks/useFeed';
+import { useFeed, addWeekdays } from './hooks/useFeed';
 import { useReadingList } from './hooks/useReadingList';
 import { FeedTabs } from './components/FeedTabs';
 import { TagFilter } from './components/TagFilter';
@@ -18,19 +18,31 @@ const FEEDS: FeedMeta[] = [
 ];
 
 export default function App() {
-  const [activeTab,  setActiveTab]  = useState<ActiveTab>('dev');
-  const [activeTags, setActiveTags] = useState<string[]>([]);
-  const [catFilter,  setCatFilter]  = useState('All');
+  const [activeTab,   setActiveTab]   = useState<ActiveTab>('dev');
+  const [activeTags,  setActiveTags]  = useState<string[]>([]);
+  const [catFilter,   setCatFilter]   = useState('All');
+  // Shared date across all feeds. null = show latest issue.
+  const [targetDate,  setTargetDate]  = useState<string | null>(null);
 
-  const feedDev  = useFeed('dev');
-  const feedAi   = useFeed('ai');
-  const feedTech = useFeed('tech');
+  const feedDev  = useFeed('dev',  targetDate);
+  const feedAi   = useFeed('ai',   targetDate);
+  const feedTech = useFeed('tech', targetDate);
   const rl       = useReadingList();
 
   const feedMap = { dev: feedDev, ai: feedAi, tech: feedTech } as const;
   const activeFeed = activeTab !== 'reading-list' ? feedMap[activeTab as FeedId] : null;
-  const { issue, loading, error, isEmpty, currentDate, reload, prevDay, nextDay, canGoNext } =
-    activeFeed ?? { issue: null, loading: false, error: null, isEmpty: false, currentDate: null, reload: () => {}, prevDay: () => {}, nextDay: () => {}, canGoNext: false };
+  const { issue, loading, error, isEmpty, currentDate, reload } =
+    activeFeed ?? { issue: null, loading: false, error: null, isEmpty: false, currentDate: null, reload: () => {} };
+
+  // Navigation uses targetDate when known (works even while loading), falls back to resolved currentDate
+  const dateForNav = targetDate ?? currentDate;
+  const today      = new Date().toISOString().slice(0, 10);
+  const canGoNext  = !!dateForNav && addWeekdays(dateForNav, 1) <= today;
+  const isLatest   = targetDate === null;
+
+  const prevDay    = () => { if (dateForNav) setTargetDate(addWeekdays(dateForNav, -1)); };
+  const nextDay    = () => { if (dateForNav) setTargetDate(addWeekdays(dateForNav,  1)); };
+  const goToLatest = () => setTargetDate(null);
 
   const handleTabChange = useCallback((tab: ActiveTab) => {
     setActiveTab(tab);
@@ -40,6 +52,11 @@ export default function App() {
 
   const toggleTag = (tag: string) =>
     setActiveTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
+
+  const resetFilters     = () => { setActiveTags([]); setCatFilter('All'); };
+  const handlePrevDay    = () => { resetFilters(); prevDay(); };
+  const handleNextDay    = () => { resetFilters(); nextDay(); };
+  const handleGoToLatest = () => { resetFilters(); goToLatest(); };
 
   // Phase 7.6 — window title
   useEffect(() => {
@@ -231,7 +248,7 @@ export default function App() {
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
-                  onClick={prevDay}
+                  onClick={handlePrevDay}
                   style={{
                     padding: '6px 14px',
                     border: '1px solid #1e2530',
@@ -245,7 +262,7 @@ export default function App() {
                 >◀ previous day</button>
                 {canGoNext && (
                   <button
-                    onClick={nextDay}
+                    onClick={handleNextDay}
                     style={{
                       padding: '6px 14px',
                       border: '1px solid #1e2530',
@@ -272,7 +289,7 @@ export default function App() {
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
                   <button
-                    onClick={prevDay}
+                    onClick={handlePrevDay}
                     title="Previous issue"
                     style={{
                       padding: '1px 6px',
@@ -295,7 +312,7 @@ export default function App() {
                     {currentDate ?? issue.date}
                   </span>
                   <button
-                    onClick={nextDay}
+                    onClick={handleNextDay}
                     disabled={!canGoNext}
                     title="Next issue"
                     style={{
@@ -310,6 +327,23 @@ export default function App() {
                       lineHeight: 1.6,
                     }}
                   >▶</button>
+                  {!isLatest && (
+                    <button
+                      onClick={handleGoToLatest}
+                      title="Jump to latest issue"
+                      style={{
+                        padding: '1px 8px',
+                        border: '1px solid #1e2530',
+                        borderRadius: 4,
+                        background: 'transparent',
+                        color: accentColor,
+                        fontSize: 10,
+                        cursor: 'pointer',
+                        fontFamily: "'JetBrains Mono', monospace",
+                        lineHeight: 1.6,
+                      }}
+                    >today</button>
+                  )}
                   <span style={{ fontSize: 13, color: '#8899aa', marginLeft: 2 }}>
                     {issue.headline}
                   </span>
@@ -333,7 +367,7 @@ export default function App() {
               </div>
 
               {/* Phase 7.3 — Empty filter state */}
-              <div style={{ padding: '12px 20px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div className="articles-grid" style={{ padding: '12px 20px' }}>
                 {filteredArticles.length === 0 ? (
                   <div style={{ color: '#64748b', fontSize: 13, padding: '20px 0' }}>
                     no articles match ·{' '}

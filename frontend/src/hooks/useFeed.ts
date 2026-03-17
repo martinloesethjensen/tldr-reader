@@ -11,7 +11,7 @@ function ck(feedId: FeedId, date: string) { return `${feedId}:${date}`; }
 const latestKey = (feedId: FeedId) => `${feedId}:latest`;
 
 /** Move dateStr by n weekdays (positive = forward, negative = back). */
-function addWeekdays(dateStr: string, n: number): string {
+export function addWeekdays(dateStr: string, n: number): string {
   const [y, m, d] = dateStr.split('-').map(Number);
   const dt = new Date(Date.UTC(y, m - 1, d));
   let rem = Math.abs(n);
@@ -32,20 +32,19 @@ interface UseFeedResult {
   /** The date currently being viewed — populated even when isEmpty is true. */
   currentDate: string | null;
   reload:      () => void;
-  prevDay:     () => void;
-  nextDay:     () => void;
-  canGoNext:   boolean;
 }
 
-export function useFeed(feedId: FeedId): UseFeedResult {
+/**
+ * targetDate = null  → fetch the latest issue
+ * targetDate = "YYYY-MM-DD" → fetch that specific date
+ */
+export function useFeed(feedId: FeedId, targetDate: string | null): UseFeedResult {
   const [issue,       setIssue]       = useState<Issue | null>(null);
   const [loading,     setLoading]     = useState(true);
   const [error,       setError]       = useState<string | null>(null);
   const [isEmpty,     setIsEmpty]     = useState(false);
   // The date we are currently showing (null = still resolving latest)
   const [currentDate, setCurrentDate] = useState<string | null>(null);
-  // null = show latest; string = pinned date
-  const [targetDate,  setTargetDate]  = useState<string | null>(null);
 
   async function doLoad(date: string | null, bust = false) {
     // Cache hit — serve immediately without a network request
@@ -62,6 +61,7 @@ export function useFeed(feedId: FeedId): UseFeedResult {
     setLoading(true);
     setError(null);
     setIsEmpty(false);
+    setIssue(null);
     try {
       const data = date !== null
         ? await fetchFeedForDate(feedId, date)
@@ -84,11 +84,11 @@ export function useFeed(feedId: FeedId): UseFeedResult {
     }
   }
 
-  // On mount, serve from cache instantly if available, otherwise fetch
+  // Re-fetch whenever feedId or targetDate changes
   useEffect(() => {
-    setTargetDate(null);
     setCurrentDate(null);
-    const cached = cache.get(latestKey(feedId));
+    const key = targetDate !== null ? ck(feedId, targetDate) : latestKey(feedId);
+    const cached = cache.get(key);
     if (cached) {
       setIssue(cached);
       setCurrentDate(cached.date);
@@ -99,11 +99,10 @@ export function useFeed(feedId: FeedId): UseFeedResult {
       setIssue(null);
       setIsEmpty(false);
       setLoading(true);
-      doLoad(null);
+      doLoad(targetDate);
     }
-  // feedId is constant per hook instance; doLoad captures it via closure
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [feedId]);
+  }, [feedId, targetDate]);
 
   const reload = () => {
     if (issue) cache.delete(ck(feedId, issue.date));
@@ -111,25 +110,7 @@ export function useFeed(feedId: FeedId): UseFeedResult {
     doLoad(targetDate, true);
   };
 
-  // prevDay/nextDay operate off currentDate so they work even on empty state
-  const prevDay = () => {
-    if (!currentDate) return;
-    const date = addWeekdays(currentDate, -1);
-    setTargetDate(date);
-    doLoad(date);
-  };
-
-  const nextDay = () => {
-    if (!currentDate) return;
-    const date = addWeekdays(currentDate, 1);
-    setTargetDate(date);
-    doLoad(date);
-  };
-
-  const today = new Date().toISOString().slice(0, 10);
-  const canGoNext = !!currentDate && addWeekdays(currentDate, 1) <= today;
-
-  return { issue, loading, error, isEmpty, currentDate, reload, prevDay, nextDay, canGoNext };
+  return { issue, loading, error, isEmpty, currentDate, reload };
 }
 
 export function bustCache(feedId: FeedId) {
