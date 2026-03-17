@@ -1,0 +1,57 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-dmg:
+    runs-on: macos-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: '. -> target'
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      # Build the backend sidecar first — Tauri bundles it via externalBin
+      - name: Build backend (release)
+        run: cargo build --release -p tldr-backend
+
+      # Rename binary to match Tauri's sidecar naming convention (<name>-<target-triple>)
+      - name: Rename sidecar binary
+        run: |
+          TARGET=$(rustc -vV | awk '/^host:/ { print $2 }')
+          cp target/release/tldr-backend "target/release/tldr-backend-${TARGET}"
+
+      - name: Build Tauri app (DMG only)
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: frontend
+          tagName: ${{ github.ref_name }}
+          releaseName: TLDR Reader ${{ github.ref_name }}
+          releaseBody: |
+            See the [changelog](https://github.com/${{ github.repository }}/commits/${{ github.ref_name }}) for what's new.
+          args: --bundles dmg
