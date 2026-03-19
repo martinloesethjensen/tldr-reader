@@ -1,4 +1,3 @@
-// PHASE 4
 interface Props {
   categories: string[];
   active:     string;
@@ -23,9 +22,9 @@ export function CategoryFilter({ categories, active, onChange }: Props) {
               fontSize: 11,
               fontFamily: "'JetBrains Mono', monospace",
               borderRadius: 4,
-              border: `1px solid ${isActive ? '#dde4ef' : '#1e2530'}`,
-              background: isActive ? '#dde4ef' : 'transparent',
-              color: isActive ? '#07090e' : '#64748b',
+              border: `1px solid ${isActive ? 'var(--text-primary)' : 'var(--border)'}`,
+              background: isActive ? 'var(--text-primary)' : 'transparent',
+              color: isActive ? 'var(--bg)' : 'var(--text-muted)',
               cursor: 'pointer',
               transition: 'background 0.12s, color 0.12s, border-color 0.12s',
             }}

@@ -1,5 +1,4 @@
-// PHASE 4
-import { tagColor } from '../colors';
+import { tagColor } from '../../colors';
 
 interface Props {
   tags:     string[];
@@ -28,7 +27,7 @@ export function TagFilter({ tags, active, onToggle, onClear }: Props) {
               borderRadius: 12,
               border: `1px solid ${color}`,
               background: isActive ? color : 'transparent',
-              color: isActive ? '#07090e' : color,
+              color: isActive ? 'var(--bg)' : color,
               cursor: 'pointer',
               transition: 'background 0.12s, color 0.12s',
             }}
@@ -43,7 +42,7 @@ export function TagFilter({ tags, active, onToggle, onClear }: Props) {
           style={{
             padding: '3px 8px',
             fontSize: 11,
-            color: '#64748b',
+            color: 'var(--text-muted)',
             background: 'transparent',
             border: 'none',
             cursor: 'pointer',

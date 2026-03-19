@@ -1,21 +1,6 @@
-// PHASE 5
 import { useState, useCallback } from 'react';
+import { loadFromStorage, saveToStorage } from '../lib/storage';
 import type { Article, FeedId, ReadingListEntry } from '../types';
-
-const STORAGE_KEY = 'tldr-reading-list';
-
-function loadFromStorage(): ReadingListEntry[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as ReadingListEntry[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveToStorage(entries: ReadingListEntry[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
-}
 
 // Module-level store so state survives tab switches
 let stored: ReadingListEntry[] = loadFromStorage();

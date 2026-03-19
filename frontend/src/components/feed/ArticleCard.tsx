@@ -1,34 +1,25 @@
-// PHASE 4
+// Feed-view only. Reading list rendering is handled by ReadingListEntryCard.
 import { useState } from 'react';
-import { openUrl } from '@tauri-apps/plugin-opener';
-import { tagColor, categoryColor } from '../colors';
-import type { Article } from '../types';
+import { openExternalUrl } from '../../lib/tauri';
+import { tagColor, categoryColor } from '../../colors';
+import type { Article } from '../../types';
 
 interface Props {
-  article:              Article;
-  activeTags:           string[];
-  onTagClick:           (tag: string) => void;
-  // Phase 5 — reading list (optional so card works standalone too)
-  isInReadingList?:     boolean;
-  isRead?:              boolean;
-  onToggleReadingList?: () => void;
-  onToggleRead?:        () => void;
-}
-
-async function openLink(url: string) {
-  try {
-    await openUrl(url);
-  } catch {
-    window.open(url, '_blank');
-  }
+  article:             Article;
+  activeTags:          string[];
+  onTagClick:          (tag: string) => void;
+  isInReadingList:     boolean;
+  isRead:              boolean;
+  onToggleReadingList: () => void;
+  onToggleRead:        () => void;
 }
 
 export function ArticleCard({
   article,
   activeTags,
   onTagClick,
-  isInReadingList = false,
-  isRead = false,
+  isInReadingList,
+  isRead,
   onToggleReadingList,
   onToggleRead,
 }: Props) {
@@ -47,8 +38,8 @@ export function ArticleCard({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        background: hovered ? '#111827' : '#0d1117',
-        border: '1px solid #1e2530',
+        background: hovered ? 'var(--card-hover)' : 'var(--card-bg)',
+        border: '1px solid var(--border)',
         borderRadius: 8,
         padding: '14px 16px',
         display: 'flex',
@@ -58,16 +49,15 @@ export function ArticleCard({
         transition: 'background 0.12s, opacity 0.2s',
       }}
     >
-      {/* Header row: title + action buttons + category badge */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
         <a
           href={article.url}
-          onClick={e => { e.preventDefault(); openLink(article.url); }}
+          onClick={e => { e.preventDefault(); openExternalUrl(article.url); }}
           style={{
             flex: 1,
             fontSize: 14,
             fontWeight: 600,
-            color: '#dde4ef',
+            color: 'var(--text-primary)',
             lineHeight: 1.4,
             textDecoration: isRead ? 'line-through' : 'none',
             cursor: 'pointer',
@@ -77,8 +67,8 @@ export function ArticleCard({
         </a>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-          {/* Mark read button — only when in reading list */}
-          {onToggleRead && isInReadingList && (
+          {/* Mark read — only shown for bookmarked articles */}
+          {isInReadingList && (
             <button
               onClick={e => { e.stopPropagation(); onToggleRead(); }}
               title={isRead ? 'Mark unread' : 'Mark as read'}
@@ -86,9 +76,9 @@ export function ArticleCard({
                 width: 26,
                 height: 26,
                 borderRadius: 4,
-                border: `1px solid ${isRead ? '#4ade80' : '#1e2530'}`,
+                border: `1px solid ${isRead ? '#4ade80' : 'var(--border)'}`,
                 background: isRead ? '#4ade8020' : 'transparent',
-                color: isRead ? '#4ade80' : '#64748b',
+                color: isRead ? '#4ade80' : 'var(--text-muted)',
                 fontSize: 12,
                 display: 'flex',
                 alignItems: 'center',
@@ -101,31 +91,29 @@ export function ArticleCard({
             </button>
           )}
 
-          {/* Save / bookmark button */}
-          {onToggleReadingList && (
-            <button
-              onClick={e => { e.stopPropagation(); onToggleReadingList(); }}
-              title={isInReadingList ? 'Remove from reading list' : 'Save to reading list'}
-              style={{
-                width: 26,
-                height: 26,
-                borderRadius: 4,
-                border: `1px solid ${isInReadingList ? '#94a3b8' : '#1e2530'}`,
-                background: isInReadingList ? '#94a3b820' : 'transparent',
-                color: isInReadingList ? '#94a3b8' : '#64748b',
-                fontSize: 13,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                transition: 'color 0.12s, border-color 0.12s, background 0.12s',
-              }}
-            >
-              🔖
-            </button>
-          )}
+          {/* Save / remove bookmark */}
+          <button
+            onClick={e => { e.stopPropagation(); onToggleReadingList(); }}
+            title={isInReadingList ? 'Remove from reading list' : 'Save to reading list'}
+            style={{
+              width: 26,
+              height: 26,
+              borderRadius: 4,
+              border: `1px solid ${isInReadingList ? '#94a3b8' : 'var(--border)'}`,
+              background: isInReadingList ? '#94a3b820' : 'transparent',
+              color: isInReadingList ? '#94a3b8' : 'var(--text-muted)',
+              fontSize: 13,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              transition: 'color 0.12s, border-color 0.12s, background 0.12s',
+            }}
+          >
+            🔖
+          </button>
 
-          {/* Copy URL button */}
+          {/* Copy URL */}
           <button
             onClick={handleCopy}
             title="Copy URL"
@@ -133,9 +121,9 @@ export function ArticleCard({
               width: 26,
               height: 26,
               borderRadius: 4,
-              border: '1px solid #1e2530',
-              background: copied ? '#1e2530' : 'transparent',
-              color: copied ? '#4ade80' : '#64748b',
+              border: '1px solid var(--border)',
+              background: copied ? 'var(--border)' : 'transparent',
+              color: copied ? '#4ade80' : 'var(--text-muted)',
               fontSize: 12,
               display: 'flex',
               alignItems: 'center',
@@ -164,11 +152,10 @@ export function ArticleCard({
         </div>
       </div>
 
-      {/* Summary */}
       {article.summary && (
         <p style={{
           fontSize: 13,
-          color: '#8899aa',
+          color: 'var(--text-secondary)',
           lineHeight: 1.55,
           margin: 0,
         }}>
@@ -176,7 +163,6 @@ export function ArticleCard({
         </p>
       )}
 
-      {/* Tags */}
       {article.tags.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
           {article.tags.map(tag => {
@@ -193,7 +179,7 @@ export function ArticleCard({
                   borderRadius: 10,
                   border: `1px solid ${color}`,
                   background: isActive ? color : 'transparent',
-                  color: isActive ? '#07090e' : color,
+                  color: isActive ? 'var(--bg)' : color,
                   cursor: 'pointer',
                   transition: 'background 0.1s, color 0.1s',
                 }}

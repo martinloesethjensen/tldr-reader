@@ -1,23 +1,22 @@
-// PHASE 4
-import type { ActiveTab, FeedId, FeedMeta } from '../types';
+import { FEEDS } from '../../config/feeds';
+import type { ActiveTab, FeedId } from '../../types';
 
 interface Props {
-  feeds:        FeedMeta[];
   active:       ActiveTab;
   loading:      Record<FeedId, boolean>;
   onChange:     (id: ActiveTab) => void;
   unreadCount:  number;
 }
 
-export function FeedTabs({ feeds, active, loading, onChange, unreadCount }: Props) {
+export function FeedTabs({ active, loading, onChange, unreadCount }: Props) {
   return (
     <div style={{
       display: 'flex',
       gap: 4,
       padding: '0 20px',
-      borderBottom: '1px solid #1e2530',
+      borderBottom: '1px solid var(--border)',
     }}>
-      {feeds.map(f => {
+      {FEEDS.map(f => {
         const isActive = active === f.id;
         const isLoading = loading[f.id];
         return (
@@ -28,7 +27,7 @@ export function FeedTabs({ feeds, active, loading, onChange, unreadCount }: Prop
               padding: '10px 16px',
               fontSize: 13,
               fontWeight: isActive ? 600 : 400,
-              color: isActive ? f.accent : '#64748b',
+              color: isActive ? f.accent : 'var(--text-muted)',
               background: isActive ? `${f.accent}15` : 'transparent',
               border: 'none',
               borderBottom: isActive ? `2px solid ${f.accent}` : '2px solid transparent',
@@ -64,7 +63,7 @@ export function FeedTabs({ feeds, active, loading, onChange, unreadCount }: Prop
           padding: '10px 16px',
           fontSize: 13,
           fontWeight: active === 'reading-list' ? 600 : 400,
-          color: active === 'reading-list' ? '#94a3b8' : '#64748b',
+          color: active === 'reading-list' ? '#94a3b8' : 'var(--text-muted)',
           background: active === 'reading-list' ? '#94a3b815' : 'transparent',
           border: 'none',
           borderBottom: active === 'reading-list' ? '2px solid #94a3b8' : '2px solid transparent',
@@ -94,13 +93,6 @@ export function FeedTabs({ feeds, active, loading, onChange, unreadCount }: Prop
           </span>
         )}
       </button>
-
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.3; }
-        }
-      `}</style>
     </div>
   );
 }

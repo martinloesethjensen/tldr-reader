@@ -1,6 +1,5 @@
-// PHASE 5
-import { ArticleCard } from './ArticleCard';
-import type { ReadingListEntry } from '../types';
+import { ReadingListEntryCard } from './ReadingListEntryCard';
+import type { ReadingListEntry } from '../../types';
 
 interface Props {
   entries:       ReadingListEntry[];
@@ -16,35 +15,44 @@ export function ReadingListPanel({ entries, onRemove, onToggleRead, onMarkAllRea
   if (entries.length === 0) {
     return (
       <div style={{
-        flex: 1,
+        height: '100%',
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        color: '#64748b',
-        fontSize: 14,
+        gap: 16,
+        padding: 40,
+        textAlign: 'center',
       }}>
-        your reading list is empty · start saving articles with 🔖
+        <span style={{ fontSize: 36 }}>🔖</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>
+            Nothing saved yet
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6, maxWidth: 280 }}>
+            Bookmark articles from any feed with 🔖 and they'll appear here for later reading.
+          </div>
+        </div>
       </div>
     );
   }
 
-  // Sort unread first, then by addedAt desc within each group
   const sorted = [...entries].sort((a, b) => {
     if (a.read !== b.read) return a.read ? 1 : -1;
     return b.addedAt.localeCompare(a.addedAt);
   });
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-      {/* Toolbar */}
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
       <div style={{
         display: 'flex',
         alignItems: 'center',
         gap: 8,
         padding: '12px 20px',
-        borderBottom: '1px solid #1e2530',
+        borderBottom: '1px solid var(--border)',
+        flexShrink: 0,
       }}>
-        <span style={{ fontSize: 13, color: '#64748b', fontFamily: "'JetBrains Mono', monospace" }}>
+        <span style={{ fontSize: 13, color: 'var(--text-muted)', fontFamily: "'JetBrains Mono', monospace" }}>
           {unread} unread · {entries.length} saved
         </span>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
@@ -53,9 +61,9 @@ export function ReadingListPanel({ entries, onRemove, onToggleRead, onMarkAllRea
             style={{
               fontSize: 12,
               padding: '4px 10px',
-              border: '1px solid #1e2530',
+              border: '1px solid var(--border)',
               borderRadius: 4,
-              color: '#94a3b8',
+              color: 'var(--text-subtle)',
               background: 'transparent',
               cursor: 'pointer',
             }}
@@ -67,9 +75,9 @@ export function ReadingListPanel({ entries, onRemove, onToggleRead, onMarkAllRea
             style={{
               fontSize: 12,
               padding: '4px 10px',
-              border: '1px solid #1e2530',
+              border: '1px solid var(--border)',
               borderRadius: 4,
-              color: '#64748b',
+              color: 'var(--text-muted)',
               background: 'transparent',
               cursor: 'pointer',
             }}
@@ -79,23 +87,12 @@ export function ReadingListPanel({ entries, onRemove, onToggleRead, onMarkAllRea
         </div>
       </div>
 
-      {/* Article list */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '16px 20px' }}>
+      <div className="articles-grid" style={{ padding: '12px 20px' }}>
         {sorted.map(entry => (
-          <ArticleCard
+          <ReadingListEntryCard
             key={entry.url}
-            article={{
-              url:      entry.url,
-              title:    entry.title,
-              summary:  entry.summary,
-              category: entry.category,
-              tags:     entry.tags,
-            }}
-            activeTags={[]}
-            onTagClick={() => {}}
-            isInReadingList
-            isRead={entry.read}
-            onToggleReadingList={() => onRemove(entry.url)}
+            entry={entry}
+            onRemove={() => onRemove(entry.url)}
             onToggleRead={() => onToggleRead(entry.url)}
           />
         ))}

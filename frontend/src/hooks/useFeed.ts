@@ -23,7 +23,7 @@ export function addWeekdays(dateStr: string, n: number): string {
   return dt.toISOString().slice(0, 10);
 }
 
-interface UseFeedResult {
+export interface UseFeedResult {
   issue:       Issue | null;
   loading:     boolean;
   error:       string | null;
@@ -111,11 +111,4 @@ export function useFeed(feedId: FeedId, targetDate: string | null): UseFeedResul
   };
 
   return { issue, loading, error, isEmpty, currentDate, reload };
-}
-
-export function bustCache(feedId: FeedId) {
-  for (const key of [...cache.keys()]) {
-    if (key.startsWith(`${feedId}:`)) cache.delete(key);
-  }
-  cache.delete(latestKey(feedId));
 }
