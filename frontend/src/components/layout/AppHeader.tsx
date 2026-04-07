@@ -2,15 +2,22 @@ import type { Theme } from '../../hooks/useTheme';
 import type { ActiveTab } from '../../types';
 
 interface Props {
-  activeTab:      ActiveTab;
-  loading:        boolean;
-  accentColor:    string;
-  theme:          Theme;
-  onReload:       () => void;
-  onToggleTheme:  () => void;
+  activeTab:        ActiveTab;
+  loading:          boolean;
+  accentColor:      string;
+  theme:            Theme;
+  onReload:         () => void;
+  onToggleTheme:    () => void;
+  updateAvailable?: boolean;
+  updateVersion?:   string | null;
+  onInstallUpdate?: () => void;
 }
 
-export function AppHeader({ activeTab, loading, accentColor, theme, onReload, onToggleTheme }: Props) {
+export function AppHeader({
+  activeTab, loading, accentColor, theme,
+  onReload, onToggleTheme,
+  updateAvailable, updateVersion, onInstallUpdate,
+}: Props) {
   return (
     <header style={{
       display: 'flex',
@@ -30,6 +37,27 @@ export function AppHeader({ activeTab, loading, accentColor, theme, onReload, on
       </span>
 
       <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
+        {updateAvailable && (
+          <button
+            onClick={onInstallUpdate}
+            title={updateVersion ? `Update to ${updateVersion}` : 'Update available'}
+            style={{
+              height: 30,
+              padding: '0 10px',
+              borderRadius: 6,
+              border: '1px solid #22c55e',
+              background: 'transparent',
+              color: '#22c55e',
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            ↑ Update{updateVersion ? ` ${updateVersion}` : ''}
+          </button>
+        )}
+
         <button
           onClick={onToggleTheme}
           title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}

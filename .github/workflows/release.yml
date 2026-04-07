@@ -6,14 +6,49 @@ on:
       - 'v*'
 
 jobs:
-  build-dmg:
-    runs-on: macos-latest
+  create-release:
+    runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      release_id: ${{ steps.create.outputs.release_id }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create draft GitHub release
+        id: create
+        run: |
+          RELEASE_ID=$(gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            /repos/${{ github.repository }}/releases \
+            -f tag_name="${{ github.ref_name }}" \
+            -f name="TLDR Reader ${{ github.ref_name }}" \
+            -f body="See the [changelog](https://github.com/${{ github.repository }}/commits/${{ github.ref_name }}) for what's new." \
+            -F draft=true \
+            --jq '.id')
+          echo "release_id=$RELEASE_ID" >> $GITHUB_OUTPUT
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build:
+    needs: create-release
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            bundles: dmg
+          - os: windows-latest
+            bundles: msi
+          - os: ubuntu-22.04
+            bundles: appimage,deb
+    runs-on: ${{ matrix.os }}
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -30,6 +65,16 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
+      - name: Install Linux system dependencies
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
       - name: Install frontend dependencies
         working-directory: frontend
         run: npm ci
@@ -39,19 +84,37 @@ jobs:
         run: cargo build --release -p tldr-backend
 
       # Rename binary to match Tauri's sidecar naming convention (<name>-<target-triple>)
-      - name: Rename sidecar binary
+      - name: Rename sidecar binary (macOS / Linux)
+        if: matrix.os != 'windows-latest'
         run: |
           TARGET=$(rustc -vV | awk '/^host:/ { print $2 }')
           cp target/release/tldr-backend "target/release/tldr-backend-${TARGET}"
 
-      - name: Build Tauri app (DMG only)
+      - name: Rename sidecar binary (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $TARGET = (rustc -vV | Select-String 'host: (.+)').Matches.Groups[1].Value.Trim()
+          Copy-Item "target\release\tldr-backend.exe" "target\release\tldr-backend-${TARGET}.exe"
+
+      - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           projectPath: frontend
-          tagName: ${{ github.ref_name }}
-          releaseName: TLDR Reader ${{ github.ref_name }}
-          releaseBody: |
-            See the [changelog](https://github.com/${{ github.repository }}/commits/${{ github.ref_name }}) for what's new.
-          args: --bundles dmg
+          releaseId: ${{ needs.create-release.outputs.release_id }}
+          args: --bundles ${{ matrix.bundles }}
+
+  publish-release:
+    needs: [create-release, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Publish release
+        run: gh release edit "${{ github.ref_name }}" --draft=false --repo "${{ github.repository }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
