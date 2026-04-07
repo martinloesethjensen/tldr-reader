@@ -7,6 +7,7 @@ import { useArticleFilter } from './hooks/useArticleFilter';
 import { useWindowTitle } from './hooks/useWindowTitle';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useTheme } from './hooks/useTheme';
+import { useUpdater } from './hooks/useUpdater';
 import { AppHeader } from './components/layout/AppHeader';
 import { FeedTabs } from './components/tabs/FeedTabs';
 import { FeedView } from './components/feed/FeedView';
@@ -33,6 +34,7 @@ export default function App() {
   const accentColor = FEEDS.find(f => f.id === activeTab)?.accent ?? '#64748b';
 
   const { theme, toggle: toggleTheme } = useTheme();
+  const updater = useUpdater();
 
   const handleTabChange  = useCallback((tab: ActiveTab) => setActiveTab(tab), []);
   const handlePrevDay    = () => { if (dateForNav) setTargetDate(addWeekdays(dateForNav, -1)); };
@@ -56,6 +58,9 @@ export default function App() {
         theme={theme}
         onReload={() => activeFeed?.reload()}
         onToggleTheme={toggleTheme}
+        updateAvailable={updater.updateAvailable}
+        updateVersion={updater.version}
+        onInstallUpdate={updater.install}
       />
       <FeedTabs
         active={activeTab}
